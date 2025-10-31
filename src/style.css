@@ -131,6 +131,110 @@ header p {
   }
 }
 
+.completion-message {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-lg);
+  display: none;
+}
+
+.completion-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: white;
+  position: relative;
+}
+
+.completion-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.completion-details {
+  flex: 1;
+}
+
+.completion-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.completion-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0.95;
+}
+
+.stat-item strong {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0 0.25rem;
+}
+
+.completion-close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.completion-close:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+}
+
+.completion-close:active {
+  transform: scale(0.95);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -246,6 +350,35 @@ header p {
 
   header h1 {
     font-size: 1.75rem;
+  }
+
+  .completion-message {
+    padding: 1rem 1.5rem;
+  }
+
+  .completion-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .completion-icon {
+    font-size: 2.5rem;
+  }
+
+  .completion-title {
+    font-size: 1.25rem;
+  }
+
+  .completion-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .completion-close {
+    top: 0.5rem;
+    right: 0.5rem;
   }
 
   .gallery {

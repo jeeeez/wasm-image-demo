@@ -163,6 +163,9 @@ async function handleFiles(files: FileList) {
     }
   }
 
+  // 记录开始时间
+  const startTime = performance.now();
+
   try {
     // 并行处理所有图片
     const processingTasks = Array.from(files).map((file, index) => 
@@ -172,13 +175,74 @@ async function handleFiles(files: FileList) {
     // 等待所有图片处理完成
     await Promise.all(processingTasks);
     
-    console.log(`✅ 已完成 ${files.length} 张图片的处理`);
+    // 计算总耗时
+    const totalTime = performance.now() - startTime;
+    
+    console.log(`✅ 已完成 ${files.length} 张图片的处理，总耗时: ${totalTime.toFixed(2)} ms`);
+    
+    // 显示总耗时提示
+    showCompletionMessage(files.length, totalTime);
   } catch (error) {
     console.error('处理图片失败:', error);
     alert('处理图片时发生错误,请查看控制台了解详情');
   } finally {
     if (loadingEl) loadingEl.style.display = 'none';
   }
+}
+
+// 显示完成提示消息
+function showCompletionMessage(count: number, totalTime: number) {
+  // 创建或更新提示元素
+  let messageEl = document.getElementById('completion-message');
+  
+  if (!messageEl) {
+    messageEl = document.createElement('div');
+    messageEl.id = 'completion-message';
+    messageEl.className = 'completion-message';
+    
+    const container = document.querySelector('.container');
+    const gallery = document.getElementById('gallery');
+    if (container && gallery) {
+      container.insertBefore(messageEl, gallery);
+    }
+  }
+  
+  const avgTime = (totalTime / count).toFixed(2);
+  const speedup = count > 1 ? (count / (totalTime / 100)).toFixed(1) : '1.0';
+  
+  messageEl.innerHTML = `
+    <div class="completion-content">
+      <div class="completion-icon">✅</div>
+      <div class="completion-details">
+        <div class="completion-title">处理完成！</div>
+        <div class="completion-stats">
+          <span class="stat-item">📊 共处理 <strong>${count}</strong> 张图片</span>
+          <span class="stat-item">⏱️ 总耗时 <strong>${totalTime.toFixed(2)}</strong> ms</span>
+          <span class="stat-item">⚡ 平均每张 <strong>${avgTime}</strong> ms</span>
+          <span class="stat-item">🚀 并行加速 <strong>${speedup}x</strong></span>
+        </div>
+      </div>
+      <button class="completion-close" aria-label="关闭">✕</button>
+    </div>
+  `;
+  
+  // 绑定关闭按钮事件
+  const closeBtn = messageEl.querySelector('.completion-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if (messageEl) {
+        messageEl.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (messageEl) messageEl.style.display = 'none';
+        }, 300);
+      }
+    });
+  }
+  
+  messageEl.style.display = 'block';
+  
+  // 添加显示动画
+  messageEl.style.animation = 'slideIn 0.5s ease-out';
 }
 
 // 渲染图片卡片
@@ -252,6 +316,12 @@ function clearAllImages() {
   
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   if (fileInput) fileInput.value = '';
+  
+  // 隐藏统计信息卡片
+  const messageEl = document.getElementById('completion-message');
+  if (messageEl) {
+    messageEl.style.display = 'none';
+  }
   
   updateImageCount();
 }

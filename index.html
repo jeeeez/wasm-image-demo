@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WASM 图片缩略图生成演示</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🖼️ WASM 图片缩略图生成演示</h1>
+        <p>支持多选图片，使用 WebAssembly 高效生成缩略图</p>
+      </header>
+
+      <div class="upload-section">
+        <label for="file-input" class="upload-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          选择图片
+        </label>
+        <input
+          type="file"
+          id="file-input"
+          accept="image/*"
+          multiple
+          style="display: none"
+        />
+        <div class="info">
+          <span id="image-count">未选择图片</span>
+          <button id="clear-button" style="display: none">清空所有</button>
+        </div>
+      </div>
+
+      <div id="loading" class="loading" style="display: none">
+        <div class="spinner"></div>
+        <p>正在生成缩略图...</p>
+      </div>
+
+      <div id="gallery" class="gallery"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+

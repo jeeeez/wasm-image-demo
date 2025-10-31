@@ -145,21 +145,28 @@ async function generateThumbnail(file: File) {
   return blob;
 }
 
-// 并行处理多张图片并统计总耗时
+// 批量并行处理（限制并发数为 6）
+async function processBatch(items, processor, concurrency) {
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchPromises = batch.map((item, batchIndex) => 
+      processor(item, i + batchIndex)
+    );
+    // 等待当前批次完成后再处理下一批
+    await Promise.all(batchPromises);
+  }
+}
+
+// 处理图片（每批最多 6 张）
 async function handleFiles(files: FileList) {
+  const MAX_CONCURRENT = 6; // 最大并行数量
   const startTime = performance.now();
   
-  const processingTasks = Array.from(files).map((file, index) => 
-    processSingleImage(file, index)
-  );
+  // 批量处理，避免资源耗尽
+  await processBatch(Array.from(files), processSingleImage, MAX_CONCURRENT);
   
-  // Promise.all 实现并行处理
-  await Promise.all(processingTasks);
-  
-  // 计算并显示总耗时
   const totalTime = performance.now() - startTime;
   console.log(`总耗时: ${totalTime.toFixed(2)} ms`);
-  console.log(`平均耗时: ${(totalTime / files.length).toFixed(2)} ms/张`);
 }
 ```
 
@@ -189,7 +196,8 @@ console.log(`处理耗时: ${time.toFixed(2)} ms`);
 
 ### 性能优势
 
-- **并行处理** - 多张图片同时处理，充分利用多核 CPU，速度提升数倍
+- **智能并行处理** - 采用批量并行策略，每批最多同时处理 6 张图片
+- **资源控制** - 限制并发数避免浏览器资源耗尽，确保稳定性能
 - **WebAssembly 加速** - Pica 自动使用 WASM 模块加速计算密集型操作
 - **Web Workers** - 利用多线程处理，不阻塞主线程
 - **高效算法** - 使用 Lanczos 重采样算法，质量和速度的最佳平衡
@@ -237,16 +245,19 @@ console.log(`处理耗时: ${time.toFixed(2)} ms`);
 **处理方式对比：**
 
 ```
-串行处理（旧方式）：
-图1 ████████ → 图2 ████████ → 图3 ████████ → 图4 ████████
-总耗时 = 100ms × 4 = 400ms
+串行处理：
+图1 ████ → 图2 ████ → 图3 ████ → ... → 图12 ████
+总耗时 = 100ms × 12 = 1200ms
 
-并行处理（新方式）：
-图1 ████████ ┐
-图2 ████████ ├→ 同时处理
-图3 ████████ │
-图4 ████████ ┘
-总耗时 ≈ 120ms（多核并行）
+批量并行处理（每批最多 6 张）：
+批次1: 图1-6  ████████ (6张并行) → 耗时 ~120ms
+批次2: 图7-12 ████████ (6张并行) → 耗时 ~120ms
+总耗时 ≈ 240ms（5倍加速）
+
+优势：
+✅ 避免同时处理太多图片导致内存溢出
+✅ 保持稳定的处理速度
+✅ 充分利用多核CPU但不过载
 ```
 
 *注：实际性能取决于图片大小、设备 CPU 核心数、浏览器版本和系统资源占用情况。并行处理会充分利用多核 CPU，在多图片场景下优势明显。*
@@ -290,12 +301,28 @@ A: 不会。所有处理都在浏览器本地完成，图片数据不会离开�
 </details>
 
 <details>
-<summary><strong>Q: 并行处理多少张图片最合适？</strong></summary>
+<summary><strong>Q: 为什么限制最大并行数为 6？</strong></summary>
 
-A: 理论上可以并行处理任意数量的图片。系统会自动利用多核 CPU 并行处理，浏览器会根据设备性能自动调度。一般建议：
-- 普通设备：一次处理 10-20 张
-- 高性能设备：可一次处理 50+ 张
-- 如果图片很大（>10MB），建议分批处理
+A: 限制并发数有以下好处：
+- **防止内存溢出** - 同时处理太多大图会占用大量内存
+- **稳定性能** - 避免浏览器卡顿或崩溃
+- **最佳平衡** - 6 个并发既能充分利用多核 CPU，又不会过载
+- **可扩展** - 无论选择多少张图片，都能稳定处理
+
+可以在代码中修改 `MAX_CONCURRENT` 变量来调整并发数。
+</details>
+
+<details>
+<summary><strong>Q: 如何修改最大并行数量？</strong></summary>
+
+A: 在 `src/main.ts` 的 `handleFiles` 函数中，找到：
+```typescript
+const MAX_CONCURRENT = 6; // 修改这个值
+```
+建议值：
+- 低配设备：3-4
+- 普通设备：6-8
+- 高性能设备：10-12
 </details>
 
 <details>

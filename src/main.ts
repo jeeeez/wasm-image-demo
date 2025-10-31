@@ -150,16 +150,39 @@ async function processSingleImage(file: File, index: number): Promise<void> {
   }
 }
 
-// 处理选择的图片（并行处理）
+// 批量并行处理（限制并发数）
+async function processBatch<T>(
+  items: T[],
+  processor: (item: T, index: number) => Promise<void>,
+  concurrency: number
+): Promise<void> {
+  const results: Promise<void>[] = [];
+  
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchPromises = batch.map((item, batchIndex) => 
+      processor(item, i + batchIndex)
+    );
+    
+    // 等待当前批次完成后再处理下一批
+    await Promise.all(batchPromises);
+    results.push(...batchPromises);
+  }
+}
+
+// 处理选择的图片（限制并行处理数量）
 async function handleFiles(files: FileList) {
   if (files.length === 0) return;
+
+  const MAX_CONCURRENT = 6; // 最大并行数量
+  const filesArray = Array.from(files);
 
   const loadingEl = document.getElementById('loading');
   if (loadingEl) {
     loadingEl.style.display = 'block';
     const loadingText = loadingEl.querySelector('p');
     if (loadingText) {
-      loadingText.textContent = `正在并行处理 ${files.length} 张图片...`;
+      loadingText.textContent = `正在处理 ${files.length} 张图片（最多 ${MAX_CONCURRENT} 张并行）...`;
     }
   }
 
@@ -167,18 +190,14 @@ async function handleFiles(files: FileList) {
   const startTime = performance.now();
 
   try {
-    // 并行处理所有图片
-    const processingTasks = Array.from(files).map((file, index) => 
-      processSingleImage(file, index)
-    );
-    
-    // 等待所有图片处理完成
-    await Promise.all(processingTasks);
+    // 批量并行处理，每批最多 MAX_CONCURRENT 张
+    await processBatch(filesArray, processSingleImage, MAX_CONCURRENT);
     
     // 计算总耗时
     const totalTime = performance.now() - startTime;
     
     console.log(`✅ 已完成 ${files.length} 张图片的处理，总耗时: ${totalTime.toFixed(2)} ms`);
+    console.log(`📊 并行策略: 每批最多 ${MAX_CONCURRENT} 张图片`);
     
     // 显示总耗时提示
     showCompletionMessage(files.length, totalTime);

@@ -46,11 +46,25 @@ async function generateThumbnail(file: File): Promise<{ dataUrl: string; time: n
   if (!sourceCtx) throw new Error('无法创建 Canvas 上下文');
   sourceCtx.drawImage(img, 0, 0);
   
-  // 创建目标 canvas (400x400)
+  // 计算缩略图尺寸，保持原图长宽比
+  const maxSize = 400; // 最大边长
+  let thumbnailWidth: number;
+  let thumbnailHeight: number;
+  
+  if (img.width > img.height) {
+    // 横图：宽度为最大值
+    thumbnailWidth = Math.min(maxSize, img.width);
+    thumbnailHeight = Math.round((thumbnailWidth / img.width) * img.height);
+  } else {
+    // 竖图或正方形：高度为最大值
+    thumbnailHeight = Math.min(maxSize, img.height);
+    thumbnailWidth = Math.round((thumbnailHeight / img.height) * img.width);
+  }
+  
+  // 创建目标 canvas（按比例缩放）
   const targetCanvas = document.createElement('canvas');
-  const thumbnailSize = 400;
-  targetCanvas.width = thumbnailSize;
-  targetCanvas.height = thumbnailSize;
+  targetCanvas.width = thumbnailWidth;
+  targetCanvas.height = thumbnailHeight;
   
   // 使用 Pica 进行高质量缩放 (内部使用 WebAssembly 加速)
   await pica.resize(sourceCanvas, targetCanvas, {
@@ -104,45 +118,64 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-// 处理选择的图片
+// 处理单张图片
+async function processSingleImage(file: File, index: number): Promise<void> {
+  try {
+    // 创建原图 URL
+    const originalUrl = await fileToDataUrl(file);
+    
+    // 生成缩略图
+    const { dataUrl: thumbnailUrl, time: thumbnailTime, size: thumbnailSize } = await generateThumbnail(file);
+    
+    // 添加到图片列表
+    const imageData: ImageData = {
+      id: `img-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      originalUrl,
+      thumbnailUrl,
+      thumbnailTime,
+      originalSize: file.size,
+      thumbnailSize
+    };
+    
+    images.push(imageData);
+    
+    // 渲染图片卡片（每张图片处理完成后立即显示）
+    renderImageCard(imageData);
+    
+    // 更新计数
+    updateImageCount();
+  } catch (error) {
+    console.error(`处理图片 ${file.name} 失败:`, error);
+  }
+}
+
+// 处理选择的图片（并行处理）
 async function handleFiles(files: FileList) {
   if (files.length === 0) return;
 
   const loadingEl = document.getElementById('loading');
-  if (loadingEl) loadingEl.style.display = 'block';
+  if (loadingEl) {
+    loadingEl.style.display = 'block';
+    const loadingText = loadingEl.querySelector('p');
+    if (loadingText) {
+      loadingText.textContent = `正在并行处理 ${files.length} 张图片...`;
+    }
+  }
 
   try {
-    // 处理每张图片
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // 创建原图 URL
-      const originalUrl = await fileToDataUrl(file);
-      
-      // 生成缩略图
-      const { dataUrl: thumbnailUrl, time: thumbnailTime, size: thumbnailSize } = await generateThumbnail(file);
-      
-      // 添加到图片列表
-      const imageData: ImageData = {
-        id: `img-${Date.now()}-${i}`,
-        file,
-        originalUrl,
-        thumbnailUrl,
-        thumbnailTime,
-        originalSize: file.size,
-        thumbnailSize
-      };
-      
-      images.push(imageData);
-      
-      // 渲染图片卡片
-      renderImageCard(imageData);
-    }
-
-    updateImageCount();
+    // 并行处理所有图片
+    const processingTasks = Array.from(files).map((file, index) => 
+      processSingleImage(file, index)
+    );
+    
+    // 等待所有图片处理完成
+    await Promise.all(processingTasks);
+    
+    console.log(`✅ 已完成 ${files.length} 张图片的处理`);
   } catch (error) {
     console.error('处理图片失败:', error);
-    alert('处理图片失败,请确保选择的是有效的图片文件');
+    alert('处理图片时发生错误,请查看控制台了解详情');
   } finally {
     if (loadingEl) loadingEl.style.display = 'none';
   }

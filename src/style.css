@@ -177,7 +177,11 @@ header p {
 
 .image-section {
   position: relative;
-  aspect-ratio: 1;
+  min-height: 200px;
+  max-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: #f7fafc;
 }
@@ -185,7 +189,7 @@ header p {
 .image-section img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
